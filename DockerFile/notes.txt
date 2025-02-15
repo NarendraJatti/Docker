@@ -1,0 +1,62 @@
+File Format>>INSTRUCTION arguments
+
+https://docs.docker.com/build/concepts/dockerfile/
+https://docs.docker.com/reference/dockerfile/
+
+docker build -t myimage .
+
+docker history myimage >to see all the layers 
+
+docker run myimage pwd 
+
+docker run myimage cat /etc/os-relase
+
+-p: Map ports from the container to the host machine. The format is host_port:container_port
+docker run -p 8080:80 IMAGE
+docker run -d IMAGE
+docker run --name mycontainer IMAGE
+
+
+-v: Mount a volume or bind mount between the host and container. The format is host_path:container_path
+docker run -v /host/data:/container/data IMAGE
+
+docker run -e MY_ENV_VAR=value IMAGE
+
+docker run --rm IMAGE
+
+docker run -it IMAGE bash
+
+docker run --network mynetwork IMAGE
+
+With port 8080 on the host mapped to port 80 on the container (-p 8080:80).
+docker run -d -p 8080:80 --name mywebserver nginx
+
+
+kubectl run mypod --image=nginx --restart=Never
+kubectl run myapp --image=myapp:latest --labels="app=myapp,tier=frontend"
+kubectl run myapp --image=myapp:latest --port=8080
+kubectl expose pod myapp --type=NodePort --port=8080 --target-port=8080
+
+
+e reason you see the "hello" message printed during the docker build process, even though you're not explicitly running the container, is because of the way Docker's build process works.
+
+In Docker, when you use a RUN instruction in a Dockerfile, Docker creates a new intermediate container to execute the command in the RUN instruction. This container runs the command during the build process, and the output of the command (like echo hello) is shown as part of the build logs.
+This line is executed during the image build, which creates an intermediate container to run the echo hello command. The command runs successfully, prints "hello", and that output is captured in the build logs. After this step, the intermediate container is removed, but the resulting image will now have the state after the command is executed.
+
+The key takeaway is that the command runs during the build stage, not while running the container. If you want to see the output when you run the container itself, you would need to use the command in the CMD or ENTRYPOINT instructio
+
+After each RUN command is executed inside this intermediate container:
+
+The changes made (e.g., installed software, created files) are committed to the image as a new layer
+This mechanism allows Docker to break the image-building process into multiple layers, making the final image more modular and efficient. Each layer can be cached, which means that if you rebuild the image later and some layers haven’t changed, Docker will reuse the cached version instead of rerunning the commands
+
+
+Build process (docker build -t myimage .):
+
+FROM alpine: Docker pulls the Alpine base image.
+RUN echo hello: Docker creates an intermediate container from the Alpine image, runs echo hello, captures the result, and then commits the changes to create a new image layer.
+RUN apk add curl: Docker creates another intermediate container from the current image (which now has the result of echo hello), runs apk add curl to install curl, commits the changes, and adds a new layer to the image.
+
+Run process (docker run myimage):
+
+When you run the built image, Docker starts a container from the final image created during the build process. This container will have the state from all the RUN commands executed during the build, but you can define new commands in the CMD or ENTRYPOINT for what the container should do when it runs.
