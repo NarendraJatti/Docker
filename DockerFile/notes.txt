@@ -1,5 +1,6 @@
 File Format>>INSTRUCTION arguments
 
+https://www.youtube.com/watch?v=1ymi24PeF3M > good
 https://docs.docker.com/build/concepts/dockerfile/
 https://docs.docker.com/reference/dockerfile/
 
@@ -8,8 +9,19 @@ docker build -t myimage .
 docker history myimage >to see all the layers 
 
 docker run myimage pwd 
+docker run myimage ls /downlaods
+
+docker run myimage cat testfile.txt
 
 docker run myimage cat /etc/os-relase
+
+docker run myimage whoami
+
+docker run myimage evn 
+
+docker run -it -d -p 8000:3000 img 
+
+ADD>>also does copy with additonal function of copying remote files to contaier
 
 -p: Map ports from the container to the host machine. The format is host_port:container_port
 docker run -p 8080:80 IMAGE
