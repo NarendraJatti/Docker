@@ -167,3 +167,27 @@ On resource-constrained nodes, handling large images can cause bottlenecks (e.g.
  Each container is isolated from the host and from other containers. It uses the environment defined in the Docker image it is based on.
 Since the container has its own file system (from the image), it will have its own copy of Node.js and npm as specified in the Dockerfile.
 The pod doesn't care about what's installed on the underlying host or elsewhere in the Kubernetes cluster, because the container has everything it needs inside the image.
+
+ even if your Docker container runs as USER root, it does not have direct access to the host system. Running as root within the container gives you elevated privileges inside the container itself but does not automatically grant any special access to the host system.
+
+Gaining Access to Host System
+Containers only have access to the host system in specific scenarios, which are typically controlled by the Docker user:
+
+Volume Mounts: If you mount host directories into the container (using the -v or --mount flag), the container can access those directories. The container will be able to read/write to those directories with the permissions of the user it’s running as. If it's running as root, it can have full access to those directories.
+
+Privileged Mode: Running a container in privileged mode (--privileged flag) grants it elevated access to the host system, including access to devices, more control over the kernel, and other low-level system operations. This is generally considered unsafe and should be avoided unless absolutely necessary.
+
+Host Network Mode: Running a container with --network=host gives the container access to the host’s network interfaces, but it does not give full access to the filesystem or other system resources.
+
+docker login 
+docker scan myapp-image
+best Practices
+===============
+1)use official base image 
+2)use specific image versions
+3)use samller image,leaner os distros-alpine
+4)optimzing caching-order of commands(least change to most changing ),using common image etc 
+5)using .dockerignore file >>*.md,*.keys .git etc
+6)multi-stage builds 
+7)mentioning USER details
+8)trivy,docker scan(uses snyk),iamge scaningn
