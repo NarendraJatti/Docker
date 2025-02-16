@@ -72,3 +72,98 @@ RUN apk add curl: Docker creates another intermediate container from the current
 Run process (docker run myimage):
 
 When you run the built image, Docker starts a container from the final image created during the build process. This container will have the state from all the RUN commands executed during the build, but you can define new commands in the CMD or ENTRYPOINT for what the container should do when it runs.
+
+
+docker file layers/caching
+========================
+each command = 1 layer 
+if we change in any line/command,then subsequent layers will be builta
+and previous layers will be used from cached layers only
+Tips
+====combining different commands togther in a line>single layer
+putting dependencies at the top ,putting src folder at the below 
+
+
+Each running container has its own writable layer, but it shares the underlying read-only layers from the base image with other containers.
+
+docker diff <container_id>
+
+How These Read-only Layers Form the Container's Base Filesystem:
+When a container is started from an image, the read-only layers from the image form the foundation of the container’s filesystem. The image layers include all the necessary dependencies, libraries, and files defined by the image (like the base operating system, software, or configurations). These layers are identical for every container created from the same image.
+
+Efficient Reuse: If multiple containers use the same image (for example, an Ubuntu image with nginx installed), they all share the same read-only layers. Docker doesn't duplicate these layers for each container, saving disk space and making the containers more lightweight.
+
+Immutable Base: Since the layers are read-only, they can't be changed by any container. This immutability ensures consistency across containers, as every container that uses the same image always starts with the exact same base filesystem.
+
+when building Docker images, Docker uses a layer caching mechanism to avoid unnecessary steps like downloading and installing software repeatedly, which helps speed up builds and reduce storage usage
+
+If both image1 and image2 use the same steps to install Nginx (same command, same base image, etc.), Docker will reuse the layer from the previous build (from image1) when building image2, avoiding the need to download and install Nginx again.
+
+ Conditions for Cache Reuse:
+ ==========================
+For Docker to reuse the cached layers, certain conditions must be met:
+
+Same Base Image: Both Dockerfiles should start from the same base image (e.g., ubuntu:20.04). If image2 used ubuntu:18.04, Docker would not reuse the cache from image1.
+Same Installation Command: The command used to install Nginx must be exactly the same. If image2 uses a different command (e.g., installs a different version of Nginx or uses a different package manager), Docker will treat it as a new step and not reuse the cached layer.
+No Previous Changes in Earlier Layers: Docker reuses cache layers sequentially. If any prior layer (before the Nginx installation) in the Dockerfile changes, Docker will invalidate the cache for that step and all subsequent steps, meaning it will reinstall Nginx.
+
+
+Layer Hashing for Cache Matching:
+Docker uses a caching mechanism based on layer hashes. Each layer in a Docker image is uniquely identified by a hash, which is calculated from the contents of the layer. If the contents of two layers are different, their hashes will also be different.
+
+The base image layer from ubuntu:20.04 has a specific hash that represents its contents.
+The base image layer from ubuntu:18.04 has a different hash because its contents differ from those of ubuntu:20.04.
+
+
+Tips
+========
+Docker caches image layers based on the steps in the Dockerfile. If there’s a change in a step, Docker invalidates the cache for that step and all subsequent ones. To force cache invalidation:
+
+Place frequently changing instructions (e.g., code or dependency changes) lower in the Dockerfile. This minimizes cache busting for less frequently changing steps (like installing dependencies).
+You can manually remove cached images/layers if you want to free up space or force new builds:
+docker builder prune
+
+reducing docker iamge size
+==================
+using scratch or lightweight base image(alpine)
+using multistage docker build 
+size of the contaier image decides how fast the container is created ****
+reduce layers size and reduce number of layers 
+copying compiled code from stage1 to stage2
+ Only the necessary static files (build/ folder) are copied from Stage 1.>>for react app
+
+
+Best Practices for Docker Image Security:
+Use Official Base Images: Use official and trusted base images like node:alpine and nginx:alpine to ensure they are maintained, patched, and audited for vulnerabilities.
+
+Keep Base Images Minimal: Use minimal base images (like Alpine Linux) that are smaller and have fewer components, reducing the attack surface. For example, the Alpine versions of Node.js and Nginx are smaller and more secure.
+
+Regularly Update Base Images: Keep your base images up to date with the latest security patches and fixes.
+
+Use Docker's --no-cache Option: When building images, use the --no-cache option to ensure that no outdated or vulnerable dependencies are cached.
+
+Scan Images for Vulnerabilities: Regularly scan Docker images for vulnerabilities using tools like Docker's built-in docker scan, or third-party tools like Clair or Trivy.
+
+Set Non-Root User: Ensure that the container runs as a non-root user, as running as root can be dangerous in case of a breach. This can be done by adding:
+
+
+In the context of Kubernetes (K8s) pod creation, the size of the container image does indeed affect how fast a pod is created, but it’s one of many factors involved. Here's a detailed explanation regarding the relationship between image size and pod creation speed in Kubernetes
+Larger container images take longer to download. Therefore, the larger the image, the slower the download process, which delays the pod creation
+Once the image is downloaded, Kubernetes needs to extract the layers of the container image onto the node’s file system.
+
+The larger the image and the more layers it contains, the longer this extraction process can take.
+Smaller images have fewer files and layers to extract, allowing the container to be initialized more quickly.
+Startup Time for the Container:
+After the image has been downloaded and extracted, Kubernetes launches the container. The image size indirectly affects this step because:
+
+A larger image may contain more complex software stacks, dependencies, and libraries, which could increase the container’s startup time.
+If the image has lots of files to initialize, services to start, or configurations to apply, it will take longer for the container to reach the Running state.
+On resource-constrained nodes, handling large images can cause bottlenecks (e.g., slower disk access or memory pressure), further slowing down pod creation.
+ If the node uses slow disk storage (e.g., older spinning HDDs instead of SSDs), it may take longer to download and extract large container images.
+
+
+ A Docker image is a self-contained environment that includes everything needed to run your application. This includes the operating system, system libraries, dependencies (like Node.js and npm), and your application code.
+
+ Each container is isolated from the host and from other containers. It uses the environment defined in the Docker image it is based on.
+Since the container has its own file system (from the image), it will have its own copy of Node.js and npm as specified in the Dockerfile.
+The pod doesn't care about what's installed on the underlying host or elsewhere in the Kubernetes cluster, because the container has everything it needs inside the image.
